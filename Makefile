@@ -1,6 +1,8 @@
 # Core names, package and collection(s)
 PACKAGENAME=rx
-COLLECTS=$(PACKAGENAME)
+COLLECTS=
+
+SRCDIR=./$(COLLECTS)
 
 # The root for all directly generated files
 BUILDOUTDIR=$(PWD)/build
@@ -14,7 +16,7 @@ TESTDIR=$(COLLECTS)/tests
 COVEROUTDIR=$(BUILDOUTDIR)/coverage
 
 # The `doc` (`html`, `pdf`, and `markdown`) target inputs
-SCRBLDIR=$(COLLECTS)/scribblings
+SCRBLDIR=$(SRCDIR)/scribblings
 SCRBLSRC=$(SCRBLDIR)/$(PACKAGENAME).scrbl
 
 # The `doc` (`html`, `pdf`, and `markdown`) target outputs
@@ -36,7 +38,7 @@ $(BUILDOUTDIR):
 setup:
 	raco setup \
 		--tidy --check-pkg-deps --unused-pkg-deps \
-		--only $(COLLECTS)
+		--only $(PACKAGENAME)
 
 link:
 	raco pkg install \
@@ -44,7 +46,7 @@ link:
 		--name $(PACKAGENAME) $(PWD)
 
 unlink:
-	raco pkg remove $(COLLECTS)
+	raco pkg remove $(PACKAGENAME)
 
 package: check test doc
 	raco pkg create \
@@ -59,17 +61,17 @@ package: check test doc
 test:
 	raco test \
 		--make --table \
-		--collection $(COLLECTS)
+		--collection $(PACKAGENAME)
 
 # raco pkg install --force --name cover
 coverage:
 	raco cover \
 		--exclude-pkg-basics --format coveralls \
 		--directory $(COVEROUTDIR) \
-		--package $(PACKAGENAME)
+		--package $(-range)
 
 check:
-	raco check-requires $(COLLECTS)/*.rkt
+	raco check-requires $(SRCDIR)*.rkt
 
 # ==============================================================================
 # Documentation generation targets

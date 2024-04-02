@@ -3,8 +3,8 @@ name: Racket
 on: [push, pull_request]
 
 env:
-  package: rdf-core
-  collection: rdf/core
+  package: rx
+  collection: rx
 
 jobs:
   build:
