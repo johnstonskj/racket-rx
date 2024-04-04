@@ -6,21 +6,36 @@
 
 (provide (except-out (all-defined-out)
                      *escaped-chars*
-                     *escaped-chars-in-match*))
+                     *escaped-chars-in-match*
+                     make-guard))
 
 ;; =============================================================================
-;; Modes and Parameters
+;; Parameters
 ;; =============================================================================
 
-(define rx/has-named-groups (make-parameter #f boolean? 'has-named-groups))
+(define (make-guard predicate?)
+  (λ (v) (if (predicate? v) v (error))))
 
-(define mode/c (or/c 'enclosing 'case-sensitive 'case-insensitive 'multi-line 'not-multi-line))
+(define named-group-form/c (or/c 'unsupported 'quoted 'bracketed 'p-bracketed))
+(define rx/named-group-form (make-parameter 'unsupported
+                                            (make-guard named-group-form/c)
+                                            'named-group-form))
 
-(define (rx/mode-group expr #:mode (mode '(enclosing)))
-  (let* ((mode-list (if (list? mode) mode (list mode)))
-         (mode-hash (hash 'case-sensitive "-i" 'case-insensitive "i" 'multi-line "m" 'not-multi-line "-m"))
-         (mode-string (string-append* (map (λ (m) (hash-ref mode-hash m "")) mode-list))))
-    (format "(?~a:~a)" mode-string expr)))
+(define (rx/has-named-groups)
+  (not (symbol=? (rx/named-group-form) 'unsupported)))
+
+(define group-ref-form/c (or/c 'grouped 'escaped))
+(define rx/group-ref-form (make-parameter 'escaped
+                                          (make-guard group-ref-form/c)
+                                          'group-ref-form))
+
+(define rx/has-named-group-refs (make-parameter #f
+                                                (make-guard boolean?)
+                                                'has-named-group-refs))
+
+(define rx/has-relative-group-refs (make-parameter #f
+                                                   (make-guard boolean?)
+                                                   'has-relative-group-refs))
 
 ;; =============================================================================
 ;; And and Or
@@ -28,6 +43,8 @@
 
 (define (rx/and expr . exprs)
   (string-append* expr exprs))
+
+(define rx/& rx/and)
 
 (define rx/or-operator "|")
 
@@ -40,31 +57,52 @@
 
 (define rx/range-operator "-")
 
+(define (char>=/c to-char)
+  (lambda (from-char) (if (char>=? from-char to-char)
+                          #t
+                          (raise-argument-error 'to-char (format "char>=? ~s" to-char) from-char))))
+
 (define/contract (rx/range from to)
-  (-> char? char? string?)
+  (->i ((from char?) (to (from) (and/c char? (char>=/c from)))) (result string?))
   (format "~a~a~a" from rx/range-operator to))
 
-(define (rx/match char-or-range . more)
-  (format "[~a]" (string-append* (map rx/escape
-                                      (cons char-or-range more)))))
+(define (rx/range? expr)
+  (and (string? expr)
+       (cond
+         ((= (string-length expr) 3)
+          (char=? (string-ref expr 1) #\-))
+         ((= (string-length expr) 4)
+          (or
+           (and (char=? (string-ref expr 0) #\\)
+                (char=? (string-ref expr 2) #\-))
+           (and (char=? (string-ref expr 2) #\\)
+                (char=? (string-ref expr 1) #\-))))
+         ((= (string-length expr) 5)
+          (and (char=? (string-ref expr 0) #\\)
+               (char=? (string-ref expr 2) #\-)
+               (char=? (string-ref expr 3) #\\)))
+         (else #f))))
 
-(define rx/negation-operator "^")
+(define (rx/match char-or-range . more)
+  (format "[~a]" (string-append* (if (string? char-or-range) char-or-range (string char-or-range))
+                                 (map rx/escape more))))
+
+(define (rx/match? expr)
+  (and (string-prefix? expr "[") (string-suffix? expr "]")))
+
+(define rx/not-match-operator "^")
 
 (define (rx/not-match char-or-range . more)
-  (format "[~a~a]"
-          rx/negation-operator
-          (string-append* (map rx/escape
-                               (cons char-or-range more)))))
+  (apply rx/match rx/not-match-operator char-or-range more))
+
+(define (rx/not-match? expr)
+  (and (string-prefix? expr "[^") (string-suffix? expr "]")))
 
 (define rx/^match rx/not-match)
 
-(define/contract (rx/match-range from to)
-  (-> char? char? string?)
-  (rx/match (rx/range from to)))
+(define rx/match-range (compose rx/match rx/range))
 
-(define/contract (rx/not-match-range from to)
-  (-> char? char? string?)
-  (rx/not-match (rx/range from to)))
+(define rx/not-match-range (compose rx/not-match rx/range))
 
 (define rx/^match-range rx/not-match-range)
 
@@ -76,14 +114,14 @@
   (let ((escape-chars (if (symbol=? location 'in-match)
                           *escaped-chars-in-match*
                           *escaped-chars*)))
-   (cond
-     ((char? char-or-string) (if (member char-or-string escape-chars)
-                                 (format "\\~a" char-or-string)
-                                 (format "~a" char-or-string)))
-     ((and (string? char-or-string)
-           (equal? (string-length char-or-string) 1))
-      (string-append* (map rx/escape (string->list char-or-string))))
-     (else char-or-string))))
+    (cond
+      ((char? char-or-string) (if (member char-or-string escape-chars)
+                                  (format "\\~a" char-or-string)
+                                  (format "~a" char-or-string)))
+      ((and (string? char-or-string)
+            (equal? (string-length char-or-string) 1))
+       (string-append* (map (λ (c) (rx/escape c location)) (string->list char-or-string))))
+      (else char-or-string))))
 
 ;; =============================================================================
 ;; Character Classes
@@ -185,14 +223,49 @@
 
 (define rx/+ rx/one-or-more)
 
-;; digits
-;; digits ","
-;; digits "," digits
-(define (rx/repeat expr #:lower (lower 0) #:upper (upper #f))
-  (format "~a{~a~a}" expr lower (if upper (format ",~a" upper) "")))
+(define (rx/repeat-safe? expr)
+  (or (char? expr)
+      (= (string-length expr) 1)
+      (rx/group? expr)
+      (rx/match? expr)))
+
+(define (rx/repeat expr #:lower (lower #f) #:upper (upper #f))
+  (if (and (exact-nonnegative-integer? lower)
+           (exact-nonnegative-integer? upper)
+           (< upper lower))
+      (raise-argument-error 'upper (format ">= ~s" lower) upper)
+      (format "~a{~a~a}" expr
+              (if lower lower "")
+              (if upper
+                  (if (and lower (= lower upper))
+                      ""
+                      (format ",~a" upper))
+                  ","))))
+
+(define (rx/repeat-safely expr #:lower (lower #f) #:upper (upper #f))
+  (let ((expr (if (rx/repeat-safe? expr) expr (rx/non-capture-group expr))))
+    (rx/repeat expr #:lower lower #:upper upper)))
 
 ;; =============================================================================
-;; Groups and Anchors
+;; Anchors
+;; =============================================================================
+
+(define rx/anchor-at-start "^")
+
+(define/contract (rx/string-prefix expr)
+  (-> string? string?)
+  (rx/and rx/anchor-at-start expr))
+
+(define rx/anchor-at-end "$")
+
+(define/contract (rx/string-suffix expr)
+  (-> string? string?)
+  (rx/and expr rx/anchor-at-end))
+
+(define rx/string-exactly (compose rx/string-suffix rx/string-prefix))
+
+;; =============================================================================
+;; Groups
 ;; =============================================================================
 
 (define group-repeat/c (or/c 'one 'optional 'zero-or-more 'one-or-more))
@@ -209,36 +282,55 @@
 ;;                                           (?<!...) look behind does not match expr
 ;; Note that expr matches take place directly after test match.
 
-(define (rx/group expr #:named (named #f) #:repeat (repeat 'one) . more)
-  (let ((name-str (if (and (rx/has-named-groups) named) (format "?<~a>" named) ""))
-        (repeat-str (cond
-                      ((symbol=? repeat 'optional) rx/optional-operator)
-                      ((symbol=? repeat 'zero-or-more) rx/zero-or-more-operator)
-                      ((symbol=? repeat 'one-or-more) rx/one-or-more-operator)
-                      (else ""))))
-    (format "(~a~a)~a" name-str (string-append* expr more) repeat-str)))
+(define (rx/group expr #:repeat (repeat 'one) . more)
+  (format "(~a)~a"
+          (apply rx/and expr more)
+          (cond
+            ((symbol=? repeat 'optional) rx/optional-operator)
+            ((symbol=? repeat 'zero-or-more) rx/zero-or-more-operator)
+            ((symbol=? repeat 'one-or-more) rx/one-or-more-operator)
+            (else ""))))
 
-(define (rx/or-group expr #:named (named #f) #:repeat (repeat 'one) . more)
-  (rx/group (apply rx/or expr more) #:named named #:repeat repeat))
+(define (rx/group? expr)
+  (and (string-prefix? expr "(") (string-suffix? expr ")")))
 
-(define (rx/and-group expr #:named (named #f) #:repeat (repeat 'one) . more)
-  (rx/group (apply rx/and expr more) #:named named #:repeat repeat))
+(define (rx/or-group expr #:repeat (repeat 'one) . more)
+  (rx/group (apply rx/or expr more) #:repeat repeat))
 
-(define rx/anchor-at-start "^")
+(define (rx/and-group expr #:repeat (repeat 'one) . more)
+  (rx/group (apply rx/and expr more) #:repeat repeat))
 
-(define/contract (rx/string-prefix expr)
-  (-> string? string?)
-  (rx/and rx/anchor-at-start expr))
+(define (rx/special-group special expr #:repeat (repeat 'one) . more)
+  (rx/group "?" special (apply rx/and expr more) #:repeat repeat))
 
-(define rx/anchor-at-end "$")
+(define (rx/special-group? expr)
+  (and (string-prefix? expr "(?") (string-suffix? expr ")")))
 
-(define/contract (rx/string-suffix expr)
-  (-> string? string?)
-  (rx/and expr rx/anchor-at-end))
+(define (rx/named-group expr #:name name #:repeat (repeat 'one) . more)
+  (rx/special-group (if (and (rx/has-named-groups) name) (format "<~a>" name) "")
+                    (apply rx/and expr more)
+                    #:repeat repeat))
 
-(define/contract (rx/string-exactly expr)
-  (-> string? string?)
-  (rx/string-suffix (rx/string-prefix expr)))
+(define (rx/named-group? expr)
+  (and (string-prefix? expr "(?<") (string-suffix? expr ")")))
+
+(define (rx/non-capture-group expr #:repeat (repeat 'one) . more)
+  (rx/special-group ":" (apply rx/and expr more) #:repeat repeat))
+
+(define (rx/non-capture-group? expr)
+  (and (string-prefix? expr "(?:") (string-suffix? expr ")")))
+
+;; =============================================================================
+;; Modes
+;; =============================================================================
+
+(define mode/c (or/c 'case-sensitive 'case-insensitive 'multi-line 'not-multi-line))
+
+(define (rx/with-mode expr #:mode modes)
+  (let* ((mode-list (if (list? modes) modes (list modes)))
+         (mode-hash (hash 'case-sensitive "-i" 'case-insensitive "i" 'multi-line "m" 'not-multi-line "-m"))
+         (mode-string (string-append* (map (λ (m) (hash-ref mode-hash m "")) mode-list))))
+    (rx/special-group mode-string ":"  expr)))
 
 ;; =============================================================================
 ;; Conditionals
@@ -246,39 +338,48 @@
 
 (define (rx/conditional test if-true (if-false #f))
   (if if-false
-      (rx/and-group "?" test (rx/or if-true if-false))
-      (rx/and-group "?" test if-true)))
+      (rx/special-group "" test (rx/or if-true if-false))
+      (rx/special-group "" test if-true)))
+
+(define rx/if rx/conditional)
 
 (define/contract (rx/look-ahead expr)
   (-> string? string?)
-  (rx/and-group "?=" expr))
+  (rx/special-group "=" expr))
 
 (define rx/=> rx/look-ahead)
 
 (define/contract (rx/not-look-ahead expr)
   (-> string? string?)
-  (rx/and-group "?!" expr))
+  (rx/special-group "!" expr))
 
 (define rx/!=> rx/not-look-ahead)
 
 (define/contract (rx/look-behind expr)
   (-> string? string?)
-  (rx/and-group "?<=" expr))
+  (rx/special-group "<=" expr))
 
 (define rx/<= rx/look-behind)
 
 (define/contract (rx/not-look-behind expr)
   (-> string? string?)
-  (rx/and-group "?<!" expr))
+  (rx/special-group "<!" expr))
 
 (define rx/<!= rx/not-look-behind)
 
 (define/contract (rx/group-ref n)
-  (-> exact-positive-integer? string?)
-  (format "\\~a" n))
+  (-> integer? string?)
+  ;; TODO: type check n
+  (cond
+    ((symbol=? (rx/group-ref-form) 'grouped)
+     (rx/group (number->string n)))
+    ((symbol=? (rx/group-ref-form) 'escaped)
+     (format "\\~a" n))))
 
 ;; =============================================================================
+;; =============================================================================
 ;; Local Tests
+;; =============================================================================
 ;; =============================================================================
 
 (module+ test
@@ -339,22 +440,22 @@
 
      (test-case
          "function rx/repeat (ex7)"
-       (check-equal? (rx/repeat "ca" #:lower 2)
+       (check-equal? (rx/and "c" (rx/repeat "a" #:lower 2 #:upper 2))
                      "ca{2}"))
 
      (test-case
          "function rx/repeat (ex8)"
-       (check-equal? (rx/and (rx/repeat "ca" #:lower 2) "t")
+       (check-equal? (rx/and "c" (rx/repeat "a" #:lower 2) "t")
                      "ca{2,}t"))
 
      (test-case
          "function rx/repeat (ex9)"
-       (check-equal? (rx/and (rx/repeat "ca" #:upper 2) "t")
+       (check-equal? (rx/and "c" (rx/repeat "a" #:upper 2) "t")
                      "ca{,2}t"))
 
      (test-case
          "function rx/repeat (ex10)"
-       (check-equal? (rx/and (rx/repeat "ca" #:lower 1 #:upper 2) "t")
+       (check-equal? (rx/and "c" (rx/repeat "a" #:lower 1 #:upper 2) "t")
                      "ca{1,2}t"))
 
      ;; ex11 "(c<*)(a*)"
@@ -383,7 +484,8 @@
 
      (test-case
          "function rx/group-ref (ex16)"
-       (check-equal? (rx/and "c" (rx/group rx/char-any) (rx/group-ref 1) "t")
+       (check-equal? (parameterize ((rx/group-ref-form 'escaped))
+                       (rx/and "c" (rx/group rx/char-any) (rx/group-ref 1) "t"))
                      "c(.)\\1t"))
 
      (test-case
@@ -458,14 +560,14 @@
          "function rx/match (ex29)"
        (check-equal? (rx/one-or-more (rx/match #\] #\a #\[))
                      "[]a[]+")
-       (check-equal? (rx/one-or-more (rx/match "]a["))
+       (check-equal? (rx/+ (rx/match "]a["))
                      "[]a[]+"))
 
      (test-case
          "function rx/match (ex30)"
        (check-equal? (rx/one-or-more (rx/match #\a #\^))
                      "[a^]+")
-       (check-equal? (rx/one-or-more (rx/match "a^"))
+       (check-equal? (rx/+ (rx/match "a^"))
                      "[a^]+"))
 
      (test-case
@@ -498,7 +600,7 @@
 
      (test-case
          "function rx/not-match (ex35)"
-       (check-equal? (rx/and (rx/mode-group "a" #:mode 'case-insensitive) (rx/match "tp"))
+       (check-equal? (rx/and (rx/with-mode "a" #:mode 'case-insensitive) (rx/match "tp"))
                      "(?i:a)[tp]"))
 
      (test-case
@@ -510,7 +612,7 @@
          "function rx/not-match (ex37)"
        (check-equal? (rx/one-or-more (rx/not-match #\^))
                      "[^^]+")
-       (check-equal? (rx/one-or-more (rx/^match "^"))
+       (check-equal? (rx/+ (rx/^match "^"))
                      "[^^]+"))))
 
   (run-tests rx-test-suite))
