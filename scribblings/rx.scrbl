@@ -16,52 +16,200 @@
 @author[(author+email "Simon Johnston" "johnstonskj@gmail.com")]
 @defmodule[rx]
 
+Regular expressions are wonderful tools and very powerful; however, complex expressions can be hard to write and harder
+to debug. The goal of this crate is to provide a set of functions that compose a regular expression as a set of strings.
+While this approach is more verbose, as can be seen in the examples below, it is more readable and easier to compose.
+
+@verbatim|{
+"((([A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+|
+(?:www.|[-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)(:[0-9]{0,5})?(#[\w]*)?
+((?:\/[\+~%\/.\w\-_]*)?\??(?:[-\+=&;%@.\w_]*)#?(?:[.\!\/\\w]*))?)"
+}|
+
+@examples[#:eval example-eval
+(rx/group
+  (rx/or-group
+    (rx/and
+      (rx/group
+        (rx/repeat rx/match-alpha #:lower 3 #:upper 9)
+          ":"
+          (rx/nc-group "//" #:repeat 'optional))
+      (rx/nc-group
+        (rx/match "-;:&=\\+\\$,\\w" #:repeat 'one-or-more) "@"
+        #:repeat 'optional)
+      (rx/match rx/range-alnum ".-"
+        #:repeat 'one-or-more))
+    (rx/and
+      (rx/nc-group
+        (rx/or ":www."
+               (rx/and
+                 (rx/match rx/range-alnum ".-"
+                           #:repeat 'one-or-more)
+                 "@")))
+      (rx/match rx/range-alnum ".-"
+                #:repeat 'one-or-more)))
+  (rx/group ":" (rx/repeat rx/match-digit #:lower 0 #:upper 5) #:repeat 'optional)
+  (rx/group "#" (rx/* (rx/match "\\w")) #:repeat 'optional)
+  (rx/group
+    (rx/non-capture-group
+      "/"
+      (rx/match "+~%/.\\w-_" #:repeat 'zero-or-more)
+      #:repeat 'optional)
+    (rx/? "\\?")
+    (rx/nc-group (rx/match "-+=&;%@.\\w_" #:repeat 'zero-or-more))
+    (rx/? "#")
+    (rx/nc-group
+      (rx/match ".!/\\w" #:repeat 'zero-or-more))
+    #:repeat 'optional))
+]
+
 @;{============================================================================}
 @section[]{Character Classes}
 
-@subsection[]{Posix}
-
-@defthing[posix-class/c contract?]{TBD}
-
-@defproc[(rx/posix-class->string [cls posix-class/c]) string?]{
+@defthing[rx/char-any string?]{
 TBD
-}
-
-@defproc[(rx/match-posix-class [cls posix-class/c]) string?]{
-TBD
-
-@examples[
-  #:eval example-eval
-  (rx/match-posix-class 'alpha)
-]
 }
 
 @deftogether[(
-  @defproc[(rx/not-match-posix-class [cls posix-class/c]) string?]
-  @defproc[(rx/^match-posix-class [cls posix-class/c]) string?]
+  @defthing[rx/cclass-digit string?]
+  @defthing[rx/cclass-horizontal-whitespace string?]
+  @defthing[rx/cclass-vertical-whitespace string?]
+  @defthing[rx/cclass-whitespace string?]
+  @defthing[rx/cclass-word-boundary string?]
+  @defthing[rx/cclass-word-char string?]
 )]{
 TBD
+}
 
-@examples[
-  #:eval example-eval
-  (rx/not-match-posix-class 'lower)
-  (rx/^match-posix-class 'digit)
-]
+@deftogether[(
+  @defthing[rx/cclass-non-digit string?]
+  @defthing[rx/cclass-non-horizontal-whitespace string?]
+  @defthing[rx/cclass-non-vertical-whitespace string?]
+  @defthing[rx/cclass-non-whitespace string?]
+  @defthing[rx/cclass-non-word-boundary string?]
+  @defthing[rx/cclass-non-word-char string?]
+)]{
+TBD
+}
+
+@subsection[]{Posix}
+
+@deftogether[(
+  @defthing[rx/pclass-lower string?]
+  @defthing[rx/pclass-upper string?]
+  @defthing[rx/pclass-alpha string?]
+  @defthing[rx/pclass-digit string?]
+  @defthing[rx/pclass-alnum string?]
+  @defthing[rx/pclass-xdigit string?]
+  @defthing[rx/pclass-word string?]
+  @defthing[rx/pclass-blank string?]
+  @defthing[rx/pclass-space string?]
+  @defthing[rx/pclass-graph string?]
+  @defthing[rx/pclass-print string?]
+  @defthing[rx/pclass-cntrl string?]
+  @defthing[rx/pclass-ascii string?]
+)]{
+TBD
 }
 
 @subsection[]{Unicode}
 
-@defthing[unicode-category/c contract?]{TBD}
-
-@defproc[(rx/unicode-category->string [cat unicode-category/c]) string?]{
+@defthing[rx/uchar-any string?]{
 TBD
 }
 
-@defproc[(rx/unicode-category [cat unicode-category/c]) string?]{
+@deftogether[(
+  @defthing[rx/uclass-one-data-unit string?]
+  @defthing[rx/uclass-newlines string?]
+  @defthing[rx/uclass-non-newlines string?]
+)]{
 TBD
 }
 
-@defproc[(rx/not-unicode-category [cat unicode-category/c]) string?]{
+@deftogether[(
+  @defthing[rx/uclass-letter-lower string?]
+  @defthing[rx/uclass-letter-upper string?]
+  @defthing[rx/uclass-letter-title string?]
+  @defthing[rx/uclass-letter-modifier string?]
+  @defthing[rx/uclass-letter-no-other string?]
+  @defthing[rx/uclass-letter-other string?]
+  @defthing[rx/uclass-letter string?]
+  @defthing[rx/uclass-number-decimal string?]
+  @defthing[rx/uclass-number-letter string?]
+  @defthing[rx/uclass-number-other string?]
+  @defthing[rx/uclass-number string?]
+  @defthing[rx/uclass-punctuation-open string?]
+  @defthing[rx/uclass-punctuation-close string?]
+  @defthing[rx/uclass-punctuation-quote-initial string?]
+  @defthing[rx/uclass-punctuation-quote-final string?]
+  @defthing[rx/uclass-punctuation-connector string?]
+  @defthing[rx/uclass-punctuation-dash string?]
+  @defthing[rx/uclass-punctuation-other string?]
+  @defthing[rx/uclass-punctuation string?]
+  @defthing[rx/uclass-mark-non-spacing string?]
+  @defthing[rx/uclass-mark-space-combining string?]
+  @defthing[rx/uclass-mark-enclosing string?]
+  @defthing[rx/uclass-mark string?]
+  @defthing[rx/uclass-symbol-currency string?]
+  @defthing[rx/uclass-symbol-modifier string?]
+  @defthing[rx/uclass-symbol-math string?]
+  @defthing[rx/uclass-symbol-other string?]
+  @defthing[rx/uclass-symbol string?]
+  @defthing[rx/uclass-separator-line string?]
+  @defthing[rx/uclass-separator-paragraph string?]
+  @defthing[rx/uclass-separator-space string?]
+  @defthing[rx/uclass-separator string?]
+  @defthing[rx/uclass-other-control string?]
+  @defthing[rx/uclass-other-format string?]
+  @defthing[rx/uclass-other-surrogate string?]
+  @defthing[rx/uclass-other-not-assigned string?]
+  @defthing[rx/uclass-other-private-use string?]
+  @defthing[rx/uclass-other string?]
+  @defthing[rx/uclass-any string?]
+)]{
+TBD
+}
+
+@deftogether[(
+  @defthing[rx/uclass-non-letter-lower string?]
+  @defthing[rx/uclass-non-letter-upper string?]
+  @defthing[rx/uclass-non-letter-title string?]
+  @defthing[rx/uclass-non-letter-modifier string?]
+  @defthing[rx/uclass-non-letter-no-other string?]
+  @defthing[rx/uclass-non-letter-other string?]
+  @defthing[rx/uclass-non-letter string?]
+  @defthing[rx/uclass-non-number-decimal string?]
+  @defthing[rx/uclass-non-number-letter string?]
+  @defthing[rx/uclass-non-number-other string?]
+  @defthing[rx/uclass-non-number string?]
+  @defthing[rx/uclass-non-punctuation-open string?]
+  @defthing[rx/uclass-non-punctuation-close string?]
+  @defthing[rx/uclass-non-punctuation-quote-initial string?]
+  @defthing[rx/uclass-non-punctuation-quote-final string?]
+  @defthing[rx/uclass-non-punctuation-connector string?]
+  @defthing[rx/uclass-non-punctuation-dash string?]
+  @defthing[rx/uclass-non-punctuation-other string?]
+  @defthing[rx/uclass-non-punctuation string?]
+  @defthing[rx/uclass-non-mark-non-spacing string?]
+  @defthing[rx/uclass-non-mark-space-combining string?]
+  @defthing[rx/uclass-non-mark-enclosing string?]
+  @defthing[rx/uclass-non-mark string?]
+  @defthing[rx/uclass-non-symbol-currency string?]
+  @defthing[rx/uclass-non-symbol-modifier string?]
+  @defthing[rx/uclass-non-symbol-math string?]
+  @defthing[rx/uclass-non-symbol-other string?]
+  @defthing[rx/uclass-non-symbol string?]
+  @defthing[rx/uclass-non-separator-line string?]
+  @defthing[rx/uclass-non-separator-paragraph string?]
+  @defthing[rx/uclass-non-separator-space string?]
+  @defthing[rx/uclass-non-separator string?]
+  @defthing[rx/uclass-non-other-control string?]
+  @defthing[rx/uclass-non-other-format string?]
+  @defthing[rx/uclass-non-other-surrogate string?]
+  @defthing[rx/uclass-non-other-not-assigned string?]
+  @defthing[rx/uclass-non-other-private-use string?]
+  @defthing[rx/uclass-non-other string?]
+)]{
 TBD
 }
 
@@ -119,6 +267,15 @@ Create a character range including all characters in @italic{from} ... @italic{t
   #:eval example-eval
   (rx/range #\A #\F)
   (rx/range #\F #\A)
+]
+}
+
+@defproc[(rx/ranges [from (cons/c char? char?)] ...+) string?]{
+Create multiple @racket[rx/range]s at the same time.
+
+@examples[
+  #:eval example-eval
+  (rx/ranges '(#\A . #\F) '(#\F . #\A))
 ]
 }
 
@@ -200,6 +357,57 @@ TBD
 ]
 }
 
+@subsection[]{Named Ranges}
+
+@deftogether[(
+  @defthing[rx/range-lower string?]
+  @defthing[rx/match-lower string?]
+)]{
+A pre-defined range, and match, for ASCII lower-case letter characters. Equivalent to @tt{[a-z]}.
+}
+
+@deftogether[(
+  @defthing[rx/range-upper string?]
+  @defthing[rx/match-upper string?]
+)]{
+A pre-defined range, and match, for ASCII upper-case letter characters. Equivalent to @tt{[A-Z]}.
+}
+
+@deftogether[(
+  @defthing[rx/range-alpha string?]
+  @defthing[rx/match-alpha string?]
+)]{
+A pre-defined range, and match, for ASCII upper-case and lower-case letter characters. Equivalent to @tt{[A-Za-z]}.
+}
+
+@deftogether[(
+  @defthing[rx/range-digit string?]
+  @defthing[rx/match-digit string?]
+)]{
+A pre-defined range, and match, for ASCII decimal digit characters. Equivalent to @tt{[0-9]}.
+}
+
+@deftogether[(
+  @defthing[rx/range-alnum string?]
+  @defthing[rx/match-alnum string?]
+)]{
+A pre-defined range, and match, for ASCII alpha-numeric characters. Equivalent to @tt{[A-Za-z0-9]}.
+}
+
+@deftogether[(
+  @defthing[rx/range-xdigit string?]
+  @defthing[rx/match-xdigit string?]
+)]{
+A pre-defined range, and match, for ASCII hex digit characters. Equivalent to @tt{[0-9A-Fa-f]}.
+}
+
+@deftogether[(
+  @defthing[rx/range-word string?]
+  @defthing[rx/match-word string?]
+)]{
+A pre-defined range, and match, for ASCII @italic{word} characters. Equivalent to @tt{[A-Fa-f0-9_]}.
+}
+
 @;{============================================================================}
 @section[]{Repetition}
 
@@ -264,11 +472,11 @@ TBD
 
 @examples[
   #:eval example-eval
-  (rx/repeat "maybe")
   (rx/repeat "maybe" #:lower 1)
   (rx/repeat "maybe" #:upper 1)
   (rx/repeat "maybe" #:lower 1 #:upper 3)
   (rx/repeat "maybe" #:lower 3 #:upper 1)
+  (rx/repeat "maybe")
 ]
 }
 
@@ -293,10 +501,10 @@ TBD
 
 @examples[
   #:eval example-eval
-  (rx/repeat-safely #\a)
-  (rx/repeat-safely "(abc)")
-  (rx/repeat-safely "[abc]")
-  (rx/repeat-safely "maybe")
+  (rx/repeat-safely #\a #:lower 1 #:upper 3)
+  (rx/repeat-safely "(abc)" #:lower 1 #:upper 3)
+  (rx/repeat-safely "[abc]" #:lower 1 #:upper 3)
+  (rx/repeat-safely "maybe" #:lower 1 #:upper 3)
 ]
 }
 
@@ -398,6 +606,10 @@ TBD
 @deftogether[(
   @defproc[(rx/non-capture-group? [expr string?]) boolean?]
   @defproc[(rx/non-capture-group
+            [expr string?] ...+
+            [#:repeat repeat group-repeat/c 'one])
+           string?]
+  @defproc[(rx/nc-group
             [expr string?] ...+
             [#:repeat repeat group-repeat/c 'one])
            string?]
