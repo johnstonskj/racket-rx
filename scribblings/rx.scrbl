@@ -12,7 +12,7 @@
 
 @;{============================================================================}
 
-@title[#:version  "0.1.0"]{Functional RegExp}
+@title[#:version  "1.0"]{Functional RegExp}
 @author[(author+email "Simon Johnston" "johnstonskj@gmail.com")]
 @defmodule[rx]
 

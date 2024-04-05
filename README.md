@@ -1,5 +1,5 @@
-Racket Package rx
-==
+# Racket Package rx
+
 This package provides a *functional regular expression* experience. While this may be unnecessary for small expressions it
 can be valuable in the composition of large ones.
 
