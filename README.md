@@ -9,16 +9,38 @@ can be valuable in the composition of large ones.
 [![GitHub release](https://img.shields.io/github/release/johnstonskj/racket-rx.svg?style=flat-square)](https://github.com/johnstonskj/racket-rx/releases)
 [![GitHub stars](https://img.shields.io/github/stars/johnstonskj/racket-rx.svg)](https://github.com/johnstonskj/racket-rx/stargazers)
 
+* Character Classes
+* Composition: And/Or
+* Matches and Ranges
+* Repetition
+* Anchors
+* Grouping
+* Conditionals
+* Parameters
+
 ## Example
 
-TBD
+The following example shows the use of a simple expression with the functions `rx/with-mode` to set the
 
 ```racket
 (require rx)
 
-(display (rx/or "hello" "hi" "g'day"))
+(display
+  (pregexp
+    (rx/with-mode
+      (rx/string-prefix (rx/or-group "hello" "hi" "g'day"))
+      #:mode 'case-insensitive)))
 ```
+
+This *should* result in the string `#px"(?i:^(hello|hi|g'day))"`.
 
 ## Changes
 
-TBD
+**Version 1.0**
+
+This release provides:
+
+1. Major structural components: and, or, groups, matches, and ranges.
+1. Character classes, plain regex, Posix and Unicode.
+1. Tests based on the Racket documentation.
+1. Documentation, descriptions are incomplete but all procedures are all covered.

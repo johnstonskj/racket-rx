@@ -500,6 +500,12 @@
      "Module rx"
 
      (test-case
+         "README example"
+       (check-equal? (rx/with-mode
+                      (rx/string-prefix (rx/or-group "hello" "hi" "g'day"))
+                      #:mode 'case-insensitive)
+                     "(?i:^(hello|hi|g'day))"))
+     (test-case
          "function rx/and"
        (check-equal? (rx/and "a" "b")
                      "ab"))
