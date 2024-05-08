@@ -205,7 +205,22 @@
           (rx/uclass-non-other-private-use string?)
           (rx/uclass-other string?)
           (rx/uclass-non-other string?)
-          (rx/uclass-any string?))
+          (rx/uclass-any string?)
+          ;; matches
+          (rx/range-lower string?)
+          (rx/range-upper string?)
+          (rx/range-alpha string?)
+          (rx/range-digit string?)
+          (rx/range-alnum string?)
+          (rx/range-xdigit string?)
+          (rx/range-word string?)
+          (rx/match-lower string?)
+          (rx/match-upper string?)
+          (rx/match-alpha string?)
+          (rx/match-digit string?)
+          (rx/match-alnum string?)
+          (rx/match-xdigit string?)
+          (rx/match-word string?))
          ;; Aliases
          rx/&
          rx/?
