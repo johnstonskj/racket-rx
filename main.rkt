@@ -92,13 +92,15 @@
           (rx/not-look-behind (-> stringlike/c string?))
           (rx/group-ref (-> integer? string?))
           (rx/named-group-ref (-> stringlike/c string?))
-          ;; operators
+          ;; --------------------------------------
+          ;; Operators
           (rx/or-operator string?)
           (rx/range-operator string?)
           (rx/not-match-operator string?)
           (rx/anchor-at-start string?)
           (rx/anchor-at-end string?)
-          ;; classes
+          ;; --------------------------------------
+          ;; Pre-defined classes
           (rx/char-any string?)
           (rx/cclass-word-boundary string?)
           (rx/cclass-non-word-boundary string?)
@@ -206,7 +208,8 @@
           (rx/uclass-other string?)
           (rx/uclass-non-other string?)
           (rx/uclass-any string?)
-          ;; matches
+          ;; --------------------------------------
+          ;; Pre-defined matches
           (rx/range-lower string?)
           (rx/range-upper string?)
           (rx/range-alpha string?)
@@ -221,6 +224,7 @@
           (rx/match-alnum string?)
           (rx/match-xdigit string?)
           (rx/match-word string?))
+         ;; --------------------------------------
          ;; Aliases
          rx/&
          rx/?
