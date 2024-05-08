@@ -4,17 +4,252 @@
          racket/contract
          racket/string)
 
-(provide (except-out (all-defined-out)
-                     *escaped-chars*
-                     *escaped-chars-in-match*
-                     make-guard))
+(provide (contract-out
+          (named-group-form/c flat-contract?)
+          (rx/named-group-form (parameter/c named-group-form/c named-group-form/c))
+          (group-ref-form/c flat-contract?)
+          (rx/group-ref-form (parameter/c group-ref-form/c group-ref-form/c))
+          (rx/has-named-group-refs (parameter/c boolean? boolean?))
+          (rx/has-relative-group-refs (parameter/c boolean? boolean?))
+          (stringlike/c flat-contract?)
+          (rx/and (-> stringlike/c stringlike/c ... string?))
+          (rx/or (-> stringlike/c stringlike/c ... string?))
+          (group-repeat/c flat-contract?)
+          (rx/repeat-symbol (-> group-repeat/c string?))
+          (rx/repeat-bounds (-> group-repeat/c string?))
+          (rx/optional (-> stringlike/c string?))
+          (rx/zero-or-more (-> stringlike/c string?))
+          (rx/one-or-more (-> stringlike/c string?))
+          (rx/repeat-safe? (-> stringlike/c boolean?))
+          (rx/repeat
+           (->* (stringlike/c)
+                (#:lower (or/c exact-nonnegative-integer? #f)
+                 #:upper (or/c exact-nonnegative-integer? #f))
+                string?))
+          (rx/repeat-safely
+           (->* (stringlike/c)
+                (#:lower (or/c exact-nonnegative-integer? #f)
+                 #:upper (or/c exact-nonnegative-integer? #f))
+                string?))
+          (char>=/c contract?)
+          (rx/range (->i ((from char?) (to (from) (and/c char? (char>=/c from)))) (result string?)))
+          (rx/ranges (-> (cons/c char? char?) (cons/c char? char?) ... string?))
+          (rx/range? (-> string? boolean?))
+          (rx/match
+           (->* (stringlike/c)
+                (#:repeat group-repeat/c)
+                #:rest (listof stringlike/c)
+                string?))
+          (rx/match? (-> string? boolean?))
+          (rx/not-match
+           (->* (stringlike/c)
+                (#:repeat group-repeat/c)
+                #:rest (listof stringlike/c)string?))
+          (rx/not-match? (-> string? boolean?))
+          (rx/escape (->* (stringlike/c) ((or/c 'in-match 'outside-match)) string?))
+          (rx/string-prefix (-> stringlike/c string?))
+          (rx/string-suffix (-> stringlike/c string?))
+          (rx/group
+           (->* (stringlike/c)
+                (#:repeat group-repeat/c)
+                #:rest (listof stringlike/c)
+                string?))
+          (rx/group? (-> string? boolean?))
+          (rx/or-group
+           (->* (stringlike/c)
+                (#:repeat group-repeat/c)
+                #:rest (listof stringlike/c)
+                string?))
+          (rx/and-group
+           (->* (stringlike/c)
+                (#:repeat group-repeat/c)
+                #:rest (listof stringlike/c)
+                string?))
+          (rx/special-group
+           (->* (stringlike/c stringlike/c)
+                (#:repeat group-repeat/c)
+                #:rest (listof stringlike/c)
+                string?))
+          (rx/special-group? (-> string? boolean?))
+          (rx/named-group
+           (->* (stringlike/c stringlike/c #:name stringlike/c)
+                (#:repeat group-repeat/c)
+                #:rest (listof stringlike/c)
+                string?))
+          (rx/named-group? (-> string? boolean?))
+          (rx/non-capture-group
+           (->* (stringlike/c stringlike/c)
+                (#:repeat group-repeat/c)
+                #:rest (listof stringlike/c)
+                string?))
+          (rx/non-capture-group? (-> string? boolean?))
+          (mode/c flat-contract?)
+          (rx/with-mode (-> stringlike/c #:mode (or/c mode/c (listof mode/c)) string?))
+          (rx/conditional (->* (stringlike/c stringlike/c) (stringlike/c) string?))
+          (rx/look-ahead (-> stringlike/c string?))
+          (rx/not-look-ahead (-> stringlike/c string?))
+          (rx/look-behind (-> stringlike/c string?))
+          (rx/not-look-behind (-> stringlike/c string?))
+          (rx/group-ref (-> integer? string?))
+          (rx/named-group-ref (-> stringlike/c string?))
+          ;; operators
+          (rx/or-operator string?)
+          (rx/range-operator string?)
+          (rx/not-match-operator string?)
+          (rx/anchor-at-start string?)
+          (rx/anchor-at-end string?)
+          ;; classes
+          (rx/char-any string?)
+          (rx/cclass-word-boundary string?)
+          (rx/cclass-non-word-boundary string?)
+          (rx/cclass-whitespace string?)
+          (rx/cclass-non-whitespace string?)
+          (rx/cclass-digit string?)
+          (rx/cclass-non-digit string?)
+          (rx/cclass-word-char string?)
+          (rx/cclass-non-word-char string?)
+          (rx/cclass-vertical-whitespace string?)
+          (rx/cclass-non-vertical-whitespace string?)
+          (rx/cclass-horizontal-whitespace string?)
+          (rx/cclass-non-horizontal-whitespace string?)
+          (rx/pclass-lower string?)
+          (rx/pclass-upper string?)
+          (rx/pclass-alpha string?)
+          (rx/pclass-digit string?)
+          (rx/pclass-alnum string?)
+          (rx/pclass-xdigit string?)
+          (rx/pclass-word string?)
+          (rx/pclass-blank string?)
+          (rx/pclass-space string?)
+          (rx/pclass-graph string?)
+          (rx/pclass-print string?)
+          (rx/pclass-cntrl string?)
+          (rx/pclass-ascii string?)
+          (rx/uchar-any string?)
+          (rx/uclass-one-data-unit string?)
+          (rx/uclass-newlines string?)
+          (rx/uclass-non-newlines string?)
+          (rx/uclass-letter-lower string?)
+          (rx/uclass-non-letter-lower string?)
+          (rx/uclass-letter-upper string?)
+          (rx/uclass-non-letter-upper string?)
+          (rx/uclass-letter-title string?)
+          (rx/uclass-non-letter-title string?)
+          (rx/uclass-letter-modifier string?)
+          (rx/uclass-non-letter-modifier string?)
+          (rx/uclass-letter-no-other string?)
+          (rx/uclass-non-letter-no-other string?)
+          (rx/uclass-letter-other string?)
+          (rx/uclass-non-letter-other string?)
+          (rx/uclass-letter string?)
+          (rx/uclass-non-letter string?)
+          (rx/uclass-number-decimal string?)
+          (rx/uclass-non-number-decimal string?)
+          (rx/uclass-number-letter string?)
+          (rx/uclass-non-number-letter string?)
+          (rx/uclass-number-other string?)
+          (rx/uclass-non-number-other string?)
+          (rx/uclass-number string?)
+          (rx/uclass-non-number string?)
+          (rx/uclass-punctuation-open string?)
+          (rx/uclass-non-punctuation-open string?)
+          (rx/uclass-punctuation-close string?)
+          (rx/uclass-non-punctuation-close string?)
+          (rx/uclass-punctuation-quote-initial string?)
+          (rx/uclass-non-punctuation-quote-initial string?)
+          (rx/uclass-punctuation-quote-final string?)
+          (rx/uclass-non-punctuation-quote-final string?)
+          (rx/uclass-punctuation-connector string?)
+          (rx/uclass-non-punctuation-connector string?)
+          (rx/uclass-punctuation-dash string?)
+          (rx/uclass-non-punctuation-dash string?)
+          (rx/uclass-punctuation-other string?)
+          (rx/uclass-non-punctuation-other string?)
+          (rx/uclass-punctuation string?)
+          (rx/uclass-non-punctuation string?)
+          (rx/uclass-mark-non-spacing string?)
+          (rx/uclass-non-mark-non-spacing string?)
+          (rx/uclass-mark-space-combining string?)
+          (rx/uclass-non-mark-space-combining string?)
+          (rx/uclass-mark-enclosing string?)
+          (rx/uclass-non-mark-enclosing string?)
+          (rx/uclass-mark string?)
+          (rx/uclass-non-mark string?)
+          (rx/uclass-symbol-currency string?)
+          (rx/uclass-non-symbol-currency string?)
+          (rx/uclass-symbol-modifier string?)
+          (rx/uclass-non-symbol-modifier string?)
+          (rx/uclass-symbol-math string?)
+          (rx/uclass-non-symbol-math string?)
+          (rx/uclass-symbol-other string?)
+          (rx/uclass-non-symbol-other string?)
+          (rx/uclass-symbol string?)
+          (rx/uclass-non-symbol string?)
+          (rx/uclass-separator-line string?)
+          (rx/uclass-non-separator-line string?)
+          (rx/uclass-separator-paragraph string?)
+          (rx/uclass-non-separator-paragraph string?)
+          (rx/uclass-separator-space string?)
+          (rx/uclass-non-separator-space string?)
+          (rx/uclass-separator string?)
+          (rx/uclass-non-separator string?)
+          (rx/uclass-other-control string?)
+          (rx/uclass-non-other-control string?)
+          (rx/uclass-other-format string?)
+          (rx/uclass-non-other-format string?)
+          (rx/uclass-other-surrogate string?)
+          (rx/uclass-non-other-surrogate string?)
+          (rx/uclass-other-not-assigned string?)
+          (rx/uclass-non-other-not-assigned string?)
+          (rx/uclass-other-private-use string?)
+          (rx/uclass-non-other-private-use string?)
+          (rx/uclass-other string?)
+          (rx/uclass-non-other string?)
+          (rx/uclass-any string?))
+         ;; Aliases
+         rx/&
+         rx/?
+         rx/*
+         rx/+
+         rx/^match
+         rx/match-range
+         rx/^match-range
+         rx/string-exactly
+         rx/nc-group
+         rx/if
+         rx/=>
+         rx/!=>
+         rx/<=
+         rx/<!=)
+
+;; =============================================================================
+;; Internal
+;; =============================================================================
+
+(define stringlike/c (or/c string? symbol? char?))
+
+(define (stringlike->string v)
+  (cond
+    ((string? v) v)
+    ((symbol? v) (symbol->string v))
+    ((char? v) (string v))
+    (else (raise-argument-error 'v "stringlike/c" v))))
+
+(define (stringlike-list->string-list lst)
+  (map stringlike->string lst))
+
+(define (stringlike-append str . lst)
+  (stringlike-append* (cons str lst)))
+
+(define (stringlike-append* lst)
+  (string-append* (stringlike-list->string-list lst)))
+
+(define (make-guard predicate?)
+  (λ (v) (if (predicate? v) v (error))))
 
 ;; =============================================================================
 ;; Parameters
 ;; =============================================================================
-
-(define (make-guard predicate?)
-  (λ (v) (if (predicate? v) v (error))))
 
 (define named-group-form/c
   (or/c 'unsupported 'quoted 'bracketed 'p-bracketed))
@@ -50,14 +285,15 @@
 ;; =============================================================================
 
 (define (rx/and expr . exprs)
-  (string-append* expr exprs))
+  (stringlike-append* (cons expr exprs)))
 
 (define rx/& rx/and)
 
 (define rx/or-operator "|")
 
 (define (rx/or expr . exprs)
-  (string-join (cons expr exprs) rx/or-operator))
+  (string-join (stringlike-list->string-list (cons expr exprs))
+               rx/or-operator))
 
 ;; =============================================================================
 ;; Repetition
@@ -79,20 +315,17 @@
     ((symbol=? repeat 'zero-or-more) "{0,}")
     ((symbol=? repeat 'one-or-more) "{1,}")))
 
-(define/contract (rx/optional expr)
-  (-> string? string?)
+(define (rx/optional expr)
   (rx/and expr (rx/repeat-symbol 'optional)))
 
 (define rx/? rx/optional)
 
-(define/contract (rx/zero-or-more expr)
-  (-> string? string?)
+(define (rx/zero-or-more expr)
   (rx/and expr (rx/repeat-symbol 'zero-or-more)))
 
 (define rx/* rx/zero-or-more)
 
-(define/contract (rx/one-or-more expr)
-  (-> string? string?)
+(define (rx/one-or-more expr)
   (rx/and expr (rx/repeat-symbol 'one-or-more)))
 
 (define rx/+ rx/one-or-more)
@@ -133,8 +366,7 @@
                           #t
                           (raise-argument-error 'to-char (format "char>=? ~s" to-char) from-char))))
 
-(define/contract (rx/range from to)
-  (->i ((from char?) (to (from) (and/c char? (char>=/c from)))) (result string?))
+(define (rx/range from to)
   (format "~a~a~a" from rx/range-operator to))
 
 
@@ -161,8 +393,7 @@
 
 (define (rx/match char-or-range #:repeat (repeat 'one) . more)
   (format "[~a]~a"
-          (string-append* (if (string? char-or-range) char-or-range (string char-or-range))
-                          (map rx/escape more))
+          (stringlike-append* (cons char-or-range (map rx/escape more)))
           (rx/repeat-symbol repeat)))
 
 (define (rx/match? expr)
@@ -352,14 +583,12 @@
 
 (define rx/anchor-at-start "^")
 
-(define/contract (rx/string-prefix expr)
-  (-> string? string?)
+(define (rx/string-prefix expr)
   (rx/and rx/anchor-at-start expr))
 
 (define rx/anchor-at-end "$")
 
-(define/contract (rx/string-suffix expr)
-  (-> string? string?)
+(define (rx/string-suffix expr)
   (rx/and expr rx/anchor-at-end))
 
 (define rx/string-exactly (compose rx/string-suffix rx/string-prefix))
@@ -439,32 +668,27 @@
 
 (define rx/if rx/conditional)
 
-(define/contract (rx/look-ahead expr)
-  (-> string? string?)
+(define (rx/look-ahead expr)
   (rx/special-group "=" expr))
 
 (define rx/=> rx/look-ahead)
 
-(define/contract (rx/not-look-ahead expr)
-  (-> string? string?)
+(define (rx/not-look-ahead expr)
   (rx/special-group "!" expr))
 
 (define rx/!=> rx/not-look-ahead)
 
-(define/contract (rx/look-behind expr)
-  (-> string? string?)
+(define (rx/look-behind expr)
   (rx/special-group "<=" expr))
 
 (define rx/<= rx/look-behind)
 
-(define/contract (rx/not-look-behind expr)
-  (-> string? string?)
+(define (rx/not-look-behind expr)
   (rx/special-group "<!" expr))
 
 (define rx/<!= rx/not-look-behind)
 
-(define/contract (rx/group-ref n)
-  (-> integer? string?)
+(define (rx/group-ref n)
   (if (and (symbol=? (rx/group-ref-form) 'grouped) (rx/has-relative-group-refs))
       (when (= n 0) (raise-argument-error 'n "(not (= 0))" n))
       (when (<= n 0)  (raise-argument-error 'n "> 0" n)))
@@ -474,284 +698,9 @@
     ((symbol=? (rx/group-ref-form) 'escaped)
      (format "\\~a" n))))
 
-(define/contract (rx/named-group-ref name)
-  (-> string? string?)
+(define (rx/named-group-ref name)
   (when (not (symbol=? (rx/group-ref-form) 'grouped))
     (raise-argument-error 'rx/group-ref-form "symbol=? 'grouped" (rx/group-ref-form)))
   (when (not (rx/has-named-group-refs))
     (raise-argument-error 'rx/has-named-group-refs "boolean=> #t" (rx/has-named-group-refs)))
   (rx/group name))
-
-;; =============================================================================
-;; =============================================================================
-;; Local Tests
-;; =============================================================================
-;; =============================================================================
-
-(module+ test
-
-  (require rackunit
-           rackunit/text-ui)
-
-  (provide rx-test-suite)
-
-  (define rx-test-suite
-    (test-suite
-     "Module rx"
-
-     (test-case
-         "README example"
-       (check-equal? (rx/with-mode
-                      (rx/string-prefix (rx/or-group "hello" "hi" "g'day"))
-                      #:mode 'case-insensitive)
-                     "(?i:^(hello|hi|g'day))"))
-     (test-case
-         "function rx/and"
-       (check-equal? (rx/and "a" "b")
-                     "ab"))
-
-     (test-case
-         "function rx/or (ex1)"
-       (check-equal? (rx/or "a" "b")
-                     "a|b"))
-
-     (test-case
-         "function rx/match (ex2)"
-       (check-equal? (rx/match "a" "b") "[ab]")
-       (check-equal? (rx/match #\a "b") "[ab]")
-       (check-equal? (rx/match "a" #\b) "[ab]")
-       (check-equal? (rx/match #\a #\b) "[ab]"))
-
-     (test-case
-         "function rx/zero-or-more (ex3)"
-       (check-equal? (rx/and (rx/zero-or-more "ca") (rx/match "a" "t"))
-                     "ca*[at]")
-       (check-equal? (rx/and (rx/* "ca") (rx/match "a" "t"))
-                     "ca*[at]"))
-
-     (test-case
-         "function rx/one-or-more (ex4)"
-       (check-equal? (rx/and (rx/one-or-more "ca") (rx/match "a" "t"))
-                     "ca+[at]")
-       (check-equal? (rx/and (rx/+ "ca") (rx/match "a" "t"))
-                     "ca+[at]"))
-
-     (test-case
-         "function rx/optional (ex5)"
-       (check-equal? (rx/and (rx/optional "ca") (rx/optional "t"))
-                     "ca?t?")
-       (check-equal? (rx/and (rx/? "ca") (rx/? "t"))
-                     "ca?t?"))
-
-     (test-case
-         "function * and ? (ex6)"
-       (check-equal? (rx/and (rx/optional (rx/zero-or-more "ca")) (rx/match "a" "t"))
-                     "ca*?[at]")
-       (check-equal? (rx/and (rx/? (rx/* "ca")) (rx/match "a" "t"))
-                     "ca*?[at]"))
-
-     (test-case
-         "function rx/repeat (ex7)"
-       (check-equal? (rx/and "c" (rx/repeat "a" #:lower 2 #:upper 2))
-                     "ca{2}"))
-
-     (test-case
-         "function rx/repeat (ex8)"
-       (check-equal? (rx/and "c" (rx/repeat "a" #:lower 2) "t")
-                     "ca{2,}t"))
-
-     (test-case
-         "function rx/repeat (ex9)"
-       (check-equal? (rx/and "c" (rx/repeat "a" #:upper 2) "t")
-                     "ca{,2}t"))
-
-     (test-case
-         "function rx/repeat (ex10)"
-       (check-equal? (rx/and "c" (rx/repeat "a" #:lower 1 #:upper 2) "t")
-                     "ca{1,2}t"))
-
-     ;; ex11 "(c<*)(a*)"
-
-     (test-case
-         "function rx/not-match (ex12)"
-       (check-equal? (rx/not-match "c" "a")
-                     "[^ca]")
-       (check-equal? (rx/^match "c" "a")
-                     "[^ca]"))
-
-     (test-case
-         "function rx/char-any (ex13)"
-       (check-equal? (rx/and rx/char-any (rx/group rx/char-any) rx/char-any)
-                     ".(.)."))
-
-     (test-case
-         "function rx/string-prefix (ex14)"
-       (check-equal? (rx/or (rx/string-prefix "a") (rx/string-prefix "c"))
-                     "^a|^c"))
-
-     (test-case
-         "function rx/string-suffix (ex15)"
-       (check-equal? (rx/or (rx/string-suffix "a") (rx/string-suffix "t"))
-                     "a$|t$"))
-
-     (test-case
-         "function rx/group-ref (ex16)"
-       (check-equal? (parameterize ((rx/group-ref-form 'escaped))
-                       (rx/and "c" (rx/group rx/char-any) (rx/group-ref 1) "t"))
-                     "c(.)\\1t"))
-
-     (test-case
-         "function rx/class-word-boundary (ex17)"
-       (check-equal? (rx/and rx/char-any rx/cclass-word-boundary rx/char-any)
-                     ".\\b."))
-
-     (test-case
-         "function rx/class-not-word-boundary (ex18)"
-       (check-equal? (rx/and rx/char-any rx/cclass-non-word-boundary rx/char-any)
-                     ".\\B."))
-
-     (test-case
-         "function rx/unicode-category (ex19)"
-       (check-equal? rx/uclass-letter-lower
-                     "\\p{Ll}"))
-
-     (test-case
-         "function rx/unicode-not-category (ex20)"
-       (check-equal? rx/uclass-non-letter-lower
-                     "\\P{Ll}"))
-
-     (test-case
-         "function rx/escape (ex21)"
-       (check-equal? (rx/escape #\| 'outside-match)
-                     "\\|")
-       (check-equal? (rx/escape "|" 'outside-match)
-                     "\\|"))
-
-     (test-case
-         "function rx/match-range (ex22)"
-       (check-equal? (rx/zero-or-more (rx/match (rx/range #\a #\f)))
-                     "[a-f]*")
-       (check-equal? (rx/* (rx/match-range #\a #\f))
-                     "[a-f]*"))
-
-     (test-case
-         "function rx/class-digit (ex23)"
-       (check-equal? (rx/zero-or-more (rx/match (rx/range #\a #\f) rx/cclass-digit))
-                     "[a-f\\d]*"))
-
-     (test-case
-         "function rx/class-word-char (ex24)"
-       (check-equal? (rx/and " " (rx/match rx/cclass-word-char))
-                     " [\\w]"))
-
-     (test-case
-         "function rx/class-whitespace (ex25)"
-       (check-equal? (rx/and "t" (rx/match rx/cclass-whitespace))
-                     "t[\\s]"))
-
-     (test-case
-         "function rx/match-posix-class (ex26)"
-       (check-equal? (rx/one-or-more (rx/match rx/pclass-lower))
-                     "[[:lower:]]+"))
-
-     (test-case
-         "function rx/match (ex27)"
-       (check-equal? (rx/match #\])
-                     "[]]")
-       (check-equal? (rx/match "]")
-                     "[]]"))
-
-     (test-case
-         "function rx/match (ex28)"
-       (check-equal? (rx/match #\-)
-                     "[-]")
-       (check-equal? (rx/match "-")
-                     "[-]"))
-
-     (test-case
-         "function rx/match (ex29)"
-       (check-equal? (rx/one-or-more (rx/match #\] #\a #\[))
-                     "[]a[]+")
-       (check-equal? (rx/+ (rx/match "]a["))
-                     "[]a[]+"))
-
-     (test-case
-         "function rx/match (ex30)"
-       (check-equal? (rx/one-or-more (rx/match #\a #\^))
-                     "[a^]+")
-       (check-equal? (rx/+ (rx/match "a^"))
-                     "[a^]+"))
-
-     (test-case
-         "function rx/look-ahead (ex31)"
-       (check-equal? (rx/and rx/char-any "a" (rx/look-ahead "p"))
-                     ".a(?=p)")
-       (check-equal? (rx/and rx/char-any "a" (rx/=> "p"))
-                     ".a(?=p)"))
-
-     (test-case
-         "function rx/not-look-ahead (ex32)"
-       (check-equal? (rx/and rx/char-any "a" (rx/not-look-ahead "t"))
-                     ".a(?!t)")
-       (check-equal? (rx/and rx/char-any "a" (rx/!=> "t"))
-                     ".a(?!t)"))
-
-     (test-case
-         "function rx/look-behind (ex33)"
-       (check-equal? (rx/and (rx/look-behind "n") "a" rx/char-any)
-                     "(?<=n)a.")
-       (check-equal? (rx/and (rx/<= "n") "a"  rx/char-any)
-                     "(?<=n)a."))
-
-     (test-case
-         "function rx/not-look-behind (ex34)"
-       (check-equal? (rx/and (rx/not-look-behind "c") "a" rx/char-any)
-                     "(?<!c)a.")
-       (check-equal? (rx/and (rx/<!= "c") "a"  rx/char-any)
-                     "(?<!c)a."))
-
-     (test-case
-         "function rx/not-match (ex35)"
-       (check-equal? (rx/and (rx/with-mode "a" #:mode 'case-insensitive) (rx/match "tp"))
-                     "(?i:a)[tp]"))
-
-     (test-case
-         "function rx/conditional (ex36)"
-       (check-equal? (rx/+ (rx/conditional (rx/look-behind "c") "a" "b"))
-                     "(?(?<=c)a|b)+"))
-
-     (test-case
-         "function rx/not-match (ex37)"
-       (check-equal? (rx/one-or-more (rx/not-match #\^))
-                     "[^^]+")
-       (check-equal? (rx/+ (rx/^match "^"))
-                     "[^^]+"))
-
-     (test-case
-         "function rx/ranges"
-       (check-equal? (rx/ranges '(#\A . #\Z) '(#\a . #\z) '(#\0 . #\9))
-                     "A-Za-z0-9"))
-
-     (test-case
-         "function rx/range exception"
-       (check-exn exn:fail:contract?
-                  (λ () (rx/range #\z #\a))))
-
-     (test-case
-         "function rx/group-ref exception"
-       (check-exn exn:fail:contract?
-                  (λ () (rx/group-ref 0))))
-
-     (test-case
-         "function rx/named-group-ref exception"
-       (check-exn exn:fail:contract?
-                  (λ () (rx/named-group-ref "id"))))
-
-     (test-case
-         "function rx/repeat exception"
-       (check-exn exn:fail:contract?
-                  (λ () (rx/repeat "something"))))
-
-     )) ;; << test-suite
-
-  (run-tests rx-test-suite))
